@@ -3,9 +3,11 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.embeddings import HuggingFaceInstructEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings, HuggingFaceInstructEmbeddings
 from dotenv import load_dotenv
-
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from langchain.llms import HuggingFaceHub
 
 def get_pdf_text(pdf_documents):
   text = ""
@@ -29,8 +31,9 @@ def get_chunks(text):
   
 def get_vectorstore(text_chunks):
 
-    embeddings = HuggingFaceInstructEmbeddings(model_name="WhereIsAI/UAE-Large-V1")
+    # embeddings = HuggingFaceInstructEmbeddings(model_name="WhereIsAI/UAE-Large-V1")
     # embeddings = OpenAIEmbeddings()
+    embeddings = HuggingFaceEmbeddings()  
   
     vector_store = FAISS.from_texts(text_chunks, embeddings)
   
@@ -48,26 +51,29 @@ def main():
     if st.button('Process'):
       with st.spinner('Processing...'):
         pdf_text = get_pdf_text(pdf_documents)
-        
+
         text_chunks = get_chunks(pdf_text)
-        
-        st.session_state.vector_store = get_vectorstore(text_chunks)
-        
+
+        vectorstore = get_vectorstore(text_chunks)
+        llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
+        memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+        st.session_state.conversation = ConversationalRetrievalChain.from_llm(
+          llm=llm, 
+          retriever=vectorstore.as_retriever(), 
+          memory=memory
+        )
+
         st.success('Done! You can now ask questions to your PDFs')
 
 
   st.title('Chat with Multiple PDFs :books:')
   user_question = st.text_input('Ask a question about the PDFs')
-  if st.button('Ask'):
+  if user_question is not None and user_question != '':
     with st.spinner('Searching...'):
-      if user_question:
-        docs = st.session_state.vector_store.similarity_search(user_question)
-        st.write(docs)
-        
-      else:
-        st.warning('Please enter a question')
-  
-
+      response = st.session_state.conversation({'question': user_question})
+      st.write(response)
+  else:
+    st.write('Waiting for your question...')
 
 if __name__ == '__main__':
     main()
