@@ -7,7 +7,7 @@ The MultiPDF Chatbot is a Python application that allows you to chat with multip
 ## How It Works
 ------------
 
-![MultiPDF Chatbot Diagram](./docs/PDF-LangChain.jpg)
+![MultiPDF Chatbot Diagram](./assets/img/pdfs.jpg)
 
 The application follows these steps to provide responses to your questions:
 
