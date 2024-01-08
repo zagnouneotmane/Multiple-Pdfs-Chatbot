@@ -27,7 +27,7 @@ def get_chunks(text):
     return chunks
 
   
-def get_embeddings(text_chunks):
+def get_vectorstore(text_chunks):
 
     embeddings = HuggingFaceInstructEmbeddings(model_name="WhereIsAI/UAE-Large-V1")
     # embeddings = OpenAIEmbeddings()
@@ -51,13 +51,22 @@ def main():
         
         text_chunks = get_chunks(pdf_text)
         
-        st.session_state.vector_store = get_embeddings(text_chunks)
+        st.session_state.vector_store = get_vectorstore(text_chunks)
         
         st.success('Done! You can now ask questions to your PDFs')
 
 
   st.title('Chat with Multiple PDFs :books:')
-  st.text_input('Ask a question about the PDFs')
+  user_question = st.text_input('Ask a question about the PDFs')
+  if st.button('Ask'):
+    with st.spinner('Searching...'):
+      if user_question:
+        docs = st.session_state.vector_store.similarity_search(user_question)
+        st.write(docs)
+        
+      else:
+        st.warning('Please enter a question')
+  
 
 
 if __name__ == '__main__':
